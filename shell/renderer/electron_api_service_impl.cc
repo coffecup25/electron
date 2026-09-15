@@ -8,7 +8,9 @@
 #include <vector>
 
 #include "gin/converter.h"
+#include "mojo/public/cpp/bindings/associated_remote.h"
 #include "mojo/public/cpp/system/platform_handle.h"
+#include "shell/common/web_contents_utility.mojom.h"
 #include "shell/common/gin_converters/blink_converter.h"
 #include "shell/common/gin_converters/serialized_value_converter.h"
 #include "shell/common/heap_snapshot.h"
@@ -20,6 +22,7 @@
 #include "content/public/renderer/render_frame.h"
 #include "content/public/renderer/render_thread.h"
 #include "shell/renderer/renderer_client_base.h"
+#include "third_party/blink/public/common/associated_interfaces/associated_interface_provider.h"
 #include "third_party/blink/public/common/associated_interfaces/associated_interface_registry.h"
 #include "third_party/blink/public/platform/scheduler/web_agent_group_scheduler.h"
 #include "third_party/blink/public/web/web_local_frame.h"
@@ -82,6 +85,17 @@ void ElectronApiServiceImpl::BindFrameStartupReceiver(
 void ElectronApiServiceImpl::SetStartupData(
     mojom::RendererStartupDataPtr data) {
   startup_data_ = std::move(data);
+}
+
+const mojom::RendererStartupDataPtr&
+ElectronApiServiceImpl::EnsureStartupData() {
+  if (startup_data_)
+    return startup_data_;
+
+  mojo::AssociatedRemote<mojom::ElectronWebContentsUtility> utility;
+  render_frame()->GetRemoteAssociatedInterfaces()->GetInterface(&utility);
+  utility->GetRendererStartupData(&startup_data_);
+  return startup_data_;
 }
 
 void ElectronApiServiceImpl::BindTo(

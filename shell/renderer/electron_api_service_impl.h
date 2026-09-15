@@ -64,6 +64,10 @@ class ElectronApiServiceImpl
     return startup_data_;
   }
 
+  // Returns the browser-pushed data, synchronously fetching it for this frame
+  // only when a frame lifecycle race left the push unavailable.
+  const mojom::RendererStartupDataPtr& EnsureStartupData();
+
   // Stashes the startup data the browser attached to a CreateNewWindowReply
   // for an about-to-be-created window.open() child window. Picked up by the
   // next ElectronApiServiceImpl's constructor — the new RenderFrame is created

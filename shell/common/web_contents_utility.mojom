@@ -1,6 +1,7 @@
 module electron.mojom;
 
 import "mojo/public/mojom/base/big_buffer.mojom";
+import "electron/shell/common/api/api.mojom";
 import "third_party/blink/public/mojom/permissions/permission_status.mojom";
 import "third_party/blink/public/mojom/tokens/tokens.mojom";
 import "url/mojom/origin.mojom";
@@ -20,6 +21,12 @@ interface ElectronWebContentsUtility {
   CanAccessClipboardDeprecated(
       PermissionName name,
       blink.mojom.LocalFrameToken frame_token) => (blink.mojom.PermissionStatus status);
+
+  // Returns the startup data for this frame when the ordered browser push did
+  // not arrive before script-context creation. This is a rare fallback for
+  // frame lifecycle races; normal navigations use ElectronFrameStartup.
+  [Sync]
+  GetRendererStartupData() => (RendererStartupData data);
 
   // Reports a V8 code cache produced by compiling a preload script, plus the
   // sha256 of the source that was compiled. The browser only accepts the
