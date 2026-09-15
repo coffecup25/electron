@@ -213,6 +213,65 @@ describe('renderer nodeIntegrationInSubFrames', () => {
   });
 });
 
+describe('sandboxed cross-site nested frame preloads', () => {
+  let server: http.Server;
+  let serverUrl: string;
+  let crossSiteUrl: string;
+  let w: BrowserWindow;
+
+  before(async () => {
+    server = http.createServer((req, res) => {
+      res.setHeader('content-type', 'text/html');
+      if (req.url === '/top') {
+        res.end(`<iframe src="${crossSiteUrl}/outer"></iframe>`);
+      } else if (req.url === '/outer') {
+        res.end('<iframe src="/inner"></iframe>');
+      } else {
+        res.end('<p>inner frame</p>');
+      }
+    });
+    serverUrl = (await listen(server)).url;
+    crossSiteUrl = serverUrl.replace('127.0.0.1', 'localhost');
+  });
+
+  after(async () => {
+    await closeWindow(w);
+    server.close();
+  });
+
+  it('loads the preload in a nested frame beneath a cross-site frame', async () => {
+    w = new BrowserWindow({
+      show: false,
+      webPreferences: {
+        contextIsolation: true,
+        nodeIntegrationInSubFrames: true,
+        preload: path.resolve(__dirname, 'fixtures/sub-frames/preload.js'),
+        sandbox: true
+      }
+    });
+
+    const frameUrls: string[] = [];
+    const detailsPromise = new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        ipcMain.removeListener('preload-ran', listener);
+        reject(new Error(`preload ran in ${frameUrls.length} frames: ${frameUrls.join(', ')}`));
+      }, 5000);
+      const listener = (_event: Electron.IpcMainEvent, url: string) => {
+        frameUrls.push(url);
+        if (frameUrls.length === 3) {
+          clearTimeout(timeout);
+          ipcMain.removeListener('preload-ran', listener);
+          resolve();
+        }
+      };
+      ipcMain.on('preload-ran', listener);
+    });
+    await w.loadURL(`${serverUrl}/top`);
+    await detailsPromise;
+    expect(frameUrls).to.have.lengthOf(3);
+  });
+});
+
 describe('subframe with non-standard schemes', () => {
   it('should not crash when changing subframe src to about:blank and back', async () => {
     const w = new BrowserWindow({ show: false, width: 400, height: 400 });

@@ -93,16 +93,14 @@ void ElectronSandboxedRendererClient::InitializeBindings(
   process.SetReadOnly("sandboxed", true);
   process.SetReadOnly("type", "renderer");
 
-  // The browser pushed the preload script set + process info via
-  // ElectronFrameStartup, ordered ahead of the CommitNavigation that triggered
-  // this DidCreateScriptContext. The push always lands first (associated mojo
-  // ordering); the only documents that reach here without it are ones that
-  // ShouldLoadPreload() filters out (initial empty doc, webview frames), so
-  // the bundle never observes a null startupData in practice.
+  // The browser normally pushes the preload script set + process info via
+  // ElectronFrameStartup ahead of CommitNavigation. A nested-frame lifecycle
+  // race can create this context before that push is available, so fetch the
+  // same per-frame data synchronously only in that exceptional path.
   auto* api_service = ElectronApiServiceImpl::Get(render_frame);
   v8::Local<v8::Value> startup_data;
   if (!api_service ||
-      !preload_utils::BuildStartupData(isolate, api_service->startup_data())
+      !preload_utils::BuildStartupData(isolate, api_service->EnsureStartupData())
            .ToLocal(&startup_data)) {
     startup_data = v8::Null(isolate);
   }

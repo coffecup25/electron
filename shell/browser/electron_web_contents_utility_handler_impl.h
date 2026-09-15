@@ -43,6 +43,8 @@ class ElectronWebContentsUtilityHandlerImpl
       mojom::PermissionName name,
       const blink::LocalFrameToken& frame_token,
       CanAccessClipboardDeprecatedCallback callback) override;
+  void GetRendererStartupData(
+      GetRendererStartupDataCallback callback) override;
   void SetPreloadCodeCache(const std::string& id,
                            const std::vector<uint8_t>& source_hash,
                            mojo_base::BigBuffer cache) override;

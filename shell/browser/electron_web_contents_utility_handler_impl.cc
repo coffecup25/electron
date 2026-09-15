@@ -14,6 +14,8 @@
 #include "mojo/public/cpp/bindings/self_owned_receiver.h"
 #include "shell/browser/api/electron_api_web_contents.h"
 #include "shell/browser/preload_code_cache.h"
+#include "shell/browser/renderer_startup_data.h"
+#include "shell/common/thread_restrictions.h"
 #include "third_party/blink/public/mojom/permissions/permission_status.mojom.h"
 
 namespace electron {
@@ -111,6 +113,19 @@ void ElectronWebContentsUtilityHandlerImpl::CanAccessClipboardDeprecated(
   } else {
     std::move(callback).Run(blink::mojom::PermissionStatus::DENIED);
   }
+}
+
+void ElectronWebContentsUtilityHandlerImpl::GetRendererStartupData(
+    GetRendererStartupDataCallback callback) {
+  content::RenderFrameHost* render_frame_host = GetRenderFrameHost();
+  if (!render_frame_host) {
+    std::move(callback).Run(mojom::RendererStartupData::New());
+    return;
+  }
+
+  ScopedAllowBlockingForElectron allow_blocking;
+  std::move(callback).Run(
+      renderer_startup_data::BuildForFrame(render_frame_host));
 }
 
 content::RenderFrameHost*
